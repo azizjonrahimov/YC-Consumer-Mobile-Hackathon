@@ -239,3 +239,12 @@
 - Ranks: "#4 of 12", or "#– of 12" when not ranked (player count from the leaderboard).
 - Every tile shows a number (0 when empty). The rank tiles show "…" only while loading.
 - No revyl label changed. root `npx tsc --noEmit` exit 0; iOS export builds.
+
+## HACK-BACKEND: owner walk history (17:45, run live)
+- New internal ops mutation `admin:backfillHistory {deviceId, stealFromShop?}`. It makes 7 walks over the last 6 days plus 2 today through the real `captureWalk` path (squares of 90-225 m, about 360-900 m walked, at backdated times). All loops are 300 m or more from every shop, except today's steal loop: 100 m west of Piccino, catching only the edge of Leo's area. It is idempotent: it skips a player who already has walks.
+- Ran live on the owner's device d_1b174c... ("Jack"): { walks: 9, stolen: 1 }.
+- Jack now: 1487 points, 9 walks, 5454 m, 24 blocks held (live, from today's 2 walks plus undecayed ones), 1 steal made ("Jack took 1 from Leo", not a shop block), 0 suffered.
+- Shop holders unchanged: Happy Cow = Sam 7, Neighbor Bakehouse = Maya 11, Piccino = Leo 7, Humphry free.
+- Note: Jack now leads the points ranking (1487 vs Maya 569). A new player "John" (0 points) has joined since the 17:16 cleanup.
+- Tests: new `convex/history.test.ts` (on a demoSeeded map: 9 walks, 1-2 plain blocks from Leo, shop holders and strengths unchanged, idempotent). tsc is clean and vitest passes 46/46.
+- Files to commit: convex/admin.ts, convex/history.test.ts.
