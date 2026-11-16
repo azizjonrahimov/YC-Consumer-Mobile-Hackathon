@@ -248,3 +248,19 @@
 - Note: Jack now leads the points ranking (1487 vs Maya 569). A new player "John" (0 points) has joined since the 17:16 cleanup.
 - Tests: new `convex/history.test.ts` (on a demoSeeded map: 9 walks, 1-2 plain blocks from Leo, shop holders and strengths unchanged, idempotent). tsc is clean and vitest passes 46/46.
 - Files to commit: convex/admin.ts, convex/history.test.ts.
+
+## F16: shop pins on the map (HACK-FRONTEND, 17:52)
+File: `src/components/ShopPin.tsx` only. No device or screenshot, so these are the known react-native-maps custom-marker faults that match "a bug with the icon/names of stores":
+- Clipped names: the marker view had no fixed width and the name sat in a `Pill` with `alignSelf: flex-start`, so iOS/Android sized the snapshot too narrow and cut long names ("Happy Cow Creamery & Tea"). Now the marker view is 150 px wide, the label is one line with an ellipsis, and it shows a short name: text before " & ", else the first two words ("Happy Cow", "Neighbor Bakehouse", "Humphry Slocombe", "Piccino Coffee").
+- Blank icon or flicker: `tracksViewChanges` was left at its default (always on), which makes markers flicker and on Android can snapshot before the SVG Store icon draws. Now it's true for 500 ms after mount and after `mine`/name changes, then false. `collapsable={false}` on the root view keeps Android from flattening it.
+- Position: the anchor was a guessed 0.3 of the whole pin. It's now computed so the circle's centre sits on the shop's coordinate (`ANCHOR_Y = 18 / 68`). `zIndex={10}` keeps pins above the block polygons.
+- Label: gold border (lime when I hold the shop), `bg` fill, white text, readable on the dark map.
+- Web: read `maps.web.tsx`. Its Marker portals the same view into a Leaflet divIcon (marker pane is above the polygon pane, anchor is honoured as a percentage, and the default white divIcon box is removed by `.lasso-marker`), so the fixed width and short name fix the web pin too. I did not edit the web files.
+- No revyl label changed (the tests don't read pin labels; "Around: Happy Cow Creamery & Tea" and the target card still use the full name). root `npx tsc --noEmit` exit 0; iOS export builds.
+- Still unconfirmed: no screenshot of the original bug. If it persists on a phone, a screenshot would show whether it's the label, the icon or the position.
+
+## F16b: shop pin icon and overlap (HACK-FRONTEND, 17:55)
+File: `src/components/ShopPin.tsx`.
+- Icon: the lucide SVG Store icon inside the Marker is replaced by a plain text glyph (the shop emoji U+1F3EA, 18 px, centred, `allowFontScaling={false}`). Text always shows up in the iOS marker snapshot, whereas SVG can be captured blank in Expo Go.
+- Overlap: the label is narrower (120 px max, caption size, one line, ellipsis); the circle anchor stays on the coordinate, so Happy Cow and Neighbor Bakehouse (~118 m apart) overlap less. Zoom-based hiding of names skipped: Home does not track the map region, as you allowed.
+- root `npx tsc --noEmit` exit 0; iOS export builds. No revyl label changed.
