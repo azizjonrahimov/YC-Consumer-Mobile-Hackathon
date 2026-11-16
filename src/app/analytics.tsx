@@ -37,49 +37,75 @@ function lastSevenDays(recent: Walk[]) {
   return days;
 }
 
+const VALUE_H = 16; // room above the tallest bar for its value
+
 function WeekChart({ recent }: { recent: Walk[] }) {
   const [w, setW] = useState(0);
   const days = useMemo(() => lastSevenDays(recent), [recent]);
   const max = Math.max(1, ...days.map((d) => d.metres));
+  const total = days.reduce((s, d) => s + d.metres, 0);
   const h = size.chart;
   const barW = w > 0 ? (w - BAR_GAP * 6) / 7 : 0;
 
   return (
-    <View onLayout={(e: LayoutChangeEvent) => setW(e.nativeEvent.layout.width)} style={{ height: h + LABEL_H }}>
-      {w > 0 && (
-        <Svg width={w} height={h + LABEL_H} accessibilityLabel="Metres walked per day, last 7 days">
-          {days.map((d, i) => {
-            const bh = d.metres > 0 ? Math.max(4, (d.metres / max) * (h - LABEL_H)) : 2;
-            const x = i * (barW + BAR_GAP);
-            return (
-              <Rect
-                key={d.start}
-                x={x}
-                y={h - bh}
-                width={barW}
-                height={bh}
-                rx={4}
-                fill={i === 6 ? color.accent : d.metres > 0 ? color.accentDim : color.border}
-              />
-            );
-          })}
-          {days.map((d, i) => (
-            <SvgText
-              key={`l-${d.start}`}
-              x={i * (barW + BAR_GAP) + barW / 2}
-              y={h + LABEL_H - 4}
-              fontSize={type.caption.fontSize}
-              fontFamily={font.bodyMedium}
-              fill={i === 6 ? color.text : color.textMuted}
-              textAnchor="middle">
-              {d.label}
-            </SvgText>
-          ))}
-        </Svg>
-      )}
-    </View>
+    <>
+      <Text style={[type.bodyStrong, styles.text]}>
+        {`${formatDistance(total)} this week · ${formatDistance(total / 7)} a day`}
+      </Text>
+      <View onLayout={(e: LayoutChangeEvent) => setW(e.nativeEvent.layout.width)} style={{ height: h + LABEL_H }}>
+        {w > 0 && (
+          <Svg width={w} height={h + LABEL_H} accessibilityLabel="Distance walked per day, last 7 days">
+            {days.map((d, i) => {
+              const bh = d.metres > 0 ? Math.max(4, (d.metres / max) * (h - VALUE_H)) : 2;
+              const x = i * (barW + BAR_GAP);
+              return (
+                <Rect
+                  key={d.start}
+                  x={x}
+                  y={h - bh}
+                  width={barW}
+                  height={bh}
+                  rx={4}
+                  fill={i === 6 ? color.accent : d.metres > 0 ? color.accentDim : color.border}
+                />
+              );
+            })}
+            {days.map((d, i) => {
+              const bh = d.metres > 0 ? Math.max(4, (d.metres / max) * (h - VALUE_H)) : 2;
+              return (
+                <SvgText
+                  key={`v-${d.start}`}
+                  x={i * (barW + BAR_GAP) + barW / 2}
+                  y={h - bh - 4}
+                  fontSize={type.overline.fontSize}
+                  fontFamily={font.bodySemi}
+                  fill={d.metres > 0 ? color.text : color.textFaint}
+                  textAnchor="middle">
+                  {d.metres > 0 ? formatDistance(d.metres) : '0'}
+                </SvgText>
+              );
+            })}
+            {days.map((d, i) => (
+              <SvgText
+                key={`l-${d.start}`}
+                x={i * (barW + BAR_GAP) + barW / 2}
+                y={h + LABEL_H - 4}
+                fontSize={type.caption.fontSize}
+                fontFamily={font.bodyMedium}
+                fill={i === 6 ? color.text : color.textMuted}
+                textAnchor="middle">
+                {d.label.charAt(0)}
+              </SvgText>
+            ))}
+          </Svg>
+        )}
+      </View>
+    </>
   );
 }
+
+/** Points a walk earned, per contract v4: floor(m / 10) + 10 per block; 0 when it did not count. */
+const walkPoints = (w: Walk) => (w.status === 'captured' ? Math.floor(w.lengthM / 10) + 10 * w.cellCount : 0);
 
 const STATUS: Record<string, string> = { captured: 'Captured', rejected: 'Did not count' };
 const KCAL_PER_M = 0.05;
@@ -119,7 +145,8 @@ export default function Analytics() {
   const byBlocks = useQuery(api.leaderboard.top);
   const pointsRank = myRank(byPoints, (r) => r.points, player?.playerId);
   const blocksRank = myRank(byBlocks, (r) => r.blocks, player?.playerId);
-  const rankText = (r: number | null | undefined) => (r === undefined ? '…' : r === null ? '–' : `#${r}`);
+  const rankText = (r: number | null | undefined, of: number | undefined) =>
+    r === undefined ? '…' : r === null ? `#– of ${of ?? 0}` : `#${r} of ${of ?? 0}`;
 
   return (
     <View style={styles.fill}>
@@ -146,10 +173,10 @@ export default function Analytics() {
                 <StatNumber value={formatDistance(stats.totalM)} label="Distance" />
               </Card>
               <Card style={styles.tile}>
-                <StatNumber value={rankText(pointsRank)} label="Rank by points" valueColor={color.accent} />
+                <StatNumber value={rankText(pointsRank, byPoints?.length)} label="Rank by points" valueColor={color.accent} />
               </Card>
               <Card style={styles.tile}>
-                <StatNumber value={rankText(blocksRank)} label="Rank by blocks" />
+                <StatNumber value={rankText(blocksRank, byBlocks?.length)} label="Rank by blocks" />
               </Card>
               {(() => {
                 const x = extraStats(stats.recent, stats.totalM);
@@ -176,7 +203,7 @@ export default function Analytics() {
             </View>
 
             <Card style={styles.section}>
-              <Text style={[type.overline, styles.muted]}>Metres walked, last 7 days</Text>
+              <Text style={[type.overline, styles.muted]}>Distance walked, last 7 days</Text>
               <WeekChart recent={stats.recent} />
             </Card>
 
@@ -185,19 +212,33 @@ export default function Analytics() {
               <View style={styles.row}>
                 <StatNumber value={stats.stealsMade} label="Made" valueColor={color.accent} style={styles.grow} />
                 <StatNumber value={stats.stealsSuffered} label="Suffered" valueColor={color.danger} style={styles.grow} />
+                {(() => {
+                  const net = stats.stealsMade - stats.stealsSuffered;
+                  return (
+                    <StatNumber
+                      value={net > 0 ? `+${net}` : `${net}`}
+                      label="Net"
+                      valueColor={net > 0 ? color.success : net < 0 ? color.danger : color.text}
+                      style={styles.grow}
+                    />
+                  );
+                })()}
               </View>
             </Card>
 
             <Text style={[type.overline, styles.muted]}>Last walks</Text>
             {stats.recent.length === 0 ? (
-              <Text style={[type.body, styles.muted]}>Your walks will show up here.</Text>
+              <Card style={styles.section}>
+                <Text style={[type.bodyStrong, styles.text, styles.tabular]}>{`0 walks · ${formatDistance(0)} · 0 blocks`}</Text>
+                <Text style={[type.caption, styles.faint]}>Your walks will show up here.</Text>
+              </Card>
             ) : (
               <Card style={styles.section}>
                 {stats.recent.map((w, i) => (
                   <View key={`${w.createdAt}-${i}`} style={styles.row}>
                     <View style={styles.grow}>
-                      <Text style={[type.callout, styles.text]}>
-                        {`${formatDistance(w.lengthM)}${w.status === 'captured' ? `, ${blocks(w.cellCount)}` : ''}`}
+                      <Text style={[type.callout, styles.text, styles.tabular]}>
+                        {`${formatDistance(w.lengthM)} · ${blocks(w.status === 'captured' ? w.cellCount : 0)} · +${walkPoints(w)} pts`}
                       </Text>
                       <Text style={[type.caption, styles.faint]}>{timeAgo(w.createdAt)}</Text>
                     </View>
@@ -227,4 +268,5 @@ const styles = StyleSheet.create({
   muted: { color: color.textMuted },
   faint: { color: color.textFaint },
   success: { color: color.success },
+  tabular: { fontVariant: ['tabular-nums'] },
 });

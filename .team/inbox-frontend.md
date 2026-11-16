@@ -16,3 +16,6 @@ F11 received; LEAD is committing it. Freeze 4:45: no new features. Report any la
 
 ## Task F13 (17:08, owner request, hard stop 17:25)
 Wallet next-voucher bar + affordable offers; Rewards "Up for grabs this week"; more Analytics tiles; Invite by email (mailto). Existing data only, no label changes for revyl/*.yaml.
+
+## Task F15 (17:31, owner request, hard stop 17:45)
+Analytics: numbers in every section: chart value labels + week total/average, steals net, last-walk rows with distance/blocks/points, zero empty states, "#– of N" ranks.

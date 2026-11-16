@@ -230,3 +230,12 @@
 - Points: Maya 569, Sam 521, Leo 521, Jack 0. 1 steal event in the feed (Maya took 1 block from Sam). 8 offers.
 - Decay: these blocks were claimed at 17:16, so they start losing 1 strength per hour from 18:16 (Sam's Happy Cow drops to 6 at 18:16).
 - Freeze: on call for fixes only.
+
+## F15: Analytics shows numbers everywhere (HACK-FRONTEND, 17:34)
+- File: `src/app/analytics.tsx` only.
+- 7-day chart: header "2.4 km this week · 340 m a day" (follows the units setting); the value above every bar ("420 m", "0" on empty days); single weekday letters under the bars; section title now "Distance walked, last 7 days".
+- Steals: a third number "Net" (+2 in green, -1 in red, 0 in white) beside Made / Suffered.
+- Last walks: each row "520 m · 7 blocks · +122 pts" + time ago + status. Points per walk are computed on the client with the contract v4 formula (floor(m / 10) + 10 per block, 0 when rejected), because `stats.mine.recent` carries no points. Empty state: "0 walks · 0 m · 0 blocks" with a small hint line.
+- Ranks: "#4 of 12", or "#– of 12" when not ranked (player count from the leaderboard).
+- Every tile shows a number (0 when empty). The rank tiles show "…" only while loading.
+- No revyl label changed. root `npx tsc --noEmit` exit 0; iOS export builds.
